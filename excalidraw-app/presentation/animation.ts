@@ -1,5 +1,6 @@
 import { isTransparent } from "@excalidraw/common";
 import { isLinearElement } from "@excalidraw/excalidraw";
+import { isTextElement, isFreeDrawElement } from "@excalidraw/element";
 
 import type {
   ExcalidrawElement,
@@ -124,10 +125,22 @@ const progressAnimation = (
     if (newElement === undefined) {
       return undefined;
     }
-    oldElement = {
-      ...newElement,
-      opacity: 0,
-    };
+    if (isFreeDrawElement(newElement)) {
+      oldElement = {
+        ...newElement,
+        points: newElement.points.slice(0, 1),
+      };
+    } else if (isTextElement(newElement)) {
+      oldElement = {
+        ...newElement,
+        width: 0,
+      };
+    } else {
+      oldElement = {
+        ...newElement,
+        opacity: 0,
+      };
+    }
   }
 
   // if no new element, fade out or remove old element
@@ -135,10 +148,17 @@ const progressAnimation = (
     if (oldElement === undefined || progress === 1) {
       return undefined;
     }
+    //if (isFreeDrawElement(oldElement)) {
+    //  newElement = {
+    //    ...oldElement,
+    //    points: oldElement.points.slice(0, 1),
+    //  };
+    //} else {
     newElement = {
       ...oldElement,
       opacity: 0,
     };
+    //}
   }
 
   // animate animatable properties
@@ -168,6 +188,89 @@ const progressAnimation = (
         numericalProgress(p[0], newPointsFilled[i][0], progress),
         numericalProgress(p[1], newPointsFilled[i][1], progress),
       ]);
+    } else if (isFreeDrawElement(oldElement) && isFreeDrawElement(newElement)) {
+      const getPathLength = (points: readonly any[]) => {
+        if (points.length <= 1) {
+          return 0;
+        }
+
+        let length = 0;
+        for (let i = 1, n = points.length; i < n; i++) {
+          length += Math.hypot(
+            points[i][0] - points[i - 1][0],
+            points[i][1] - points[i - 1][1],
+          );
+        }
+        return length;
+      };
+
+      const oldPoints = oldElement.points;
+      const newPoints = newElement.points;
+      const maxPointCount = Math.max(oldPoints.length, newPoints.length);
+      const oldPointsFilled =
+        oldPoints.length >= maxPointCount
+          ? oldPoints
+          : oldPoints.concat(
+              Array(maxPointCount - oldPoints.length).fill(
+                oldPoints[oldPoints.length - 1],
+              ),
+            );
+      const newPointsFilled =
+        newPoints.length >= maxPointCount
+          ? newPoints
+          : newPoints.concat(
+              Array(maxPointCount - newPoints.length).fill(
+                newPoints[newPoints.length - 1],
+              ),
+            );
+
+      intermediate.points = [];
+      const oldPathLength = getPathLength(oldPointsFilled);
+      const newPathLength = getPathLength(newPointsFilled);
+      const targetPathLength =
+        oldPathLength + (newPathLength - oldPathLength) * progress;
+      //let lastP = null;
+      let curPathLength = 0;
+      for (let i = 0; i < maxPointCount; i++) {
+        const oldP = oldPointsFilled[i];
+        const newP = newPointsFilled[i];
+        if (!oldP || !newP) {
+          continue;
+        }
+
+        //if (lastP != null) {
+        //  intermediate.points.push(lastP);
+        //  continue;
+        //}
+
+        const lastNewP = newPointsFilled[i - 1];
+        const deltaLength =
+          i > 0 ? Math.hypot(lastNewP[0] - newP[0], lastNewP[1] - newP[1]) : 0;
+        if (deltaLength === 0 || (oldP[0] === newP[0] && oldP[1] === newP[1])) {
+          intermediate.points.push(newP);
+          curPathLength += deltaLength;
+          continue;
+        }
+
+        const percent = (targetPathLength - curPathLength) / deltaLength;
+        if (percent < 0) {
+          break;
+        }
+
+        if (percent >= 1) {
+          intermediate.points.push(newP);
+          curPathLength += deltaLength;
+          continue;
+        }
+
+        intermediate.points.push([
+          numericalProgress(lastNewP[0], newP[0], percent),
+          numericalProgress(lastNewP[1], newP[1], percent),
+        ]);
+        curPathLength += deltaLength;
+        //lastP = intermediate.points[i];
+        //break;
+      }
     }
     if (ANIMATABLE_PROPERTIES.has(key)) {
       intermediate[key] = ANIMATABLE_PROPERTIES.get(key)!(
@@ -190,6 +293,7 @@ export const animate = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   oldElements: Map<string, ExcalidrawElement>,
   newElements: Map<string, ExcalidrawElement>,
+  nextAction: Function | null = null,
 ) => {
   if (!animationStartTime) {
     animationStartTime = timestamp;
@@ -213,8 +317,13 @@ export const animate = (
 
   if (progress < 1) {
     requestAnimationFrame((ts) =>
-      animate(ts, excalidrawAPI, oldElements, newElements),
+      animate(ts, excalidrawAPI, oldElements, newElements, nextAction),
     );
+  } else if (nextAction !== null) {
+    requestAnimationFrame((ts) => {
+      animationStartTime = null;
+      nextAction(ts);
+    });
   } else {
     // Reset for the next animation
     animationStartTime = null;

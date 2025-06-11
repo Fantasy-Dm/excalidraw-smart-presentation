@@ -91,12 +91,17 @@ export function PresentationScene(props: {
     useState<ExcalidrawImperativeAPI | null>(null);
 
   const renderFrame = useCallback(
-    (newFrameIndex: number) => {
+    (
+      curFrameIndex: number,
+      newFrameIndex: number,
+      autoSlideTimestamp: number | null = null,
+    ) => {
       if (!excalidrawAPI) {
         return;
       }
+      const deltaFrame = newFrameIndex - curFrameIndex;
       const newFrame = frames[newFrameIndex];
-      const currentFrame = frames[frameIndex];
+      const currentFrame = frames[curFrameIndex];
 
       const oldFrameElements = getPositionedElementsForFrame(
         currentFrame,
@@ -109,13 +114,41 @@ export function PresentationScene(props: {
 
       const oldElementsMap = buildElementMap(oldFrameElements);
       const newElementsMap = buildElementMap(newFrameElements);
+      const autoSide = (timestamp: number) => {
+        curFrameIndex = newFrameIndex;
+        const autoIndex = newFrameIndex + deltaFrame;
+        if (
+          newFrame.link === "#autoSlide" &&
+          animationStartTime === null &&
+          autoIndex < frames.length &&
+          autoIndex >= 0
+        ) {
+          renderFrame(curFrameIndex, autoIndex, timestamp);
+        }
+      };
 
       setFrameIndex(newFrameIndex);
-      requestAnimationFrame((timestamp) =>
-        animate(timestamp, excalidrawAPI, oldElementsMap, newElementsMap),
-      );
+      if (autoSlideTimestamp !== null) {
+        animate(
+          autoSlideTimestamp,
+          excalidrawAPI,
+          oldElementsMap,
+          newElementsMap,
+          autoSide,
+        );
+      } else {
+        requestAnimationFrame((timestamp) =>
+          animate(
+            timestamp,
+            excalidrawAPI,
+            oldElementsMap,
+            newElementsMap,
+            autoSide,
+          ),
+        );
+      }
     },
-    [elements, excalidrawAPI, frameIndex, frames],
+    [elements, excalidrawAPI, frames],
   );
 
   // Render initial frame and initial state
@@ -125,7 +158,7 @@ export function PresentationScene(props: {
     }
     // Disable rAF throttle since we handle our own rAF
     window.EXCALIDRAW_THROTTLE_RENDER = false;
-    renderFrame(initialFrameIndex);
+    renderFrame(frameIndex, initialFrameIndex);
     setTimeout(
       () =>
         excalidrawAPI.updateScene({
@@ -142,6 +175,7 @@ export function PresentationScene(props: {
     excalidrawAPI,
     initialFrameIndex,
     loadedInitialFrame,
+    frameIndex,
     renderFrame,
   ]);
 
@@ -215,13 +249,13 @@ export function PresentationScene(props: {
 
   const nextSlide = useCallback(() => {
     if (animationStartTime === null && frameIndex !== frames.length - 1) {
-      renderFrame(frameIndex + 1);
+      renderFrame(frameIndex, frameIndex + 1);
     }
   }, [frameIndex, frames.length, renderFrame]);
 
   const prevSlide = useCallback(() => {
     if (animationStartTime === null && frameIndex !== 0) {
-      renderFrame(frameIndex - 1);
+      renderFrame(frameIndex, frameIndex - 1);
     }
   }, [frameIndex, renderFrame]);
 
