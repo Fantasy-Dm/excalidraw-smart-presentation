@@ -118,12 +118,28 @@ export function PresentationScene(props: {
         curFrameIndex = newFrameIndex;
         const autoIndex = newFrameIndex + deltaFrame;
         if (
-          newFrame.link === "#autoSlide" &&
           animationStartTime === null &&
           autoIndex < frames.length &&
           autoIndex >= 0
         ) {
-          renderFrame(curFrameIndex, autoIndex, timestamp);
+          const autoFrame = frames[autoIndex];
+          if (autoFrame !== null) {
+            const autoGroupId =
+              autoFrame.groupIds !== null && autoFrame.groupIds.length > 0
+                ? autoFrame.groupIds[0]
+                : null;
+            const newGroupId =
+              newFrame.groupIds !== null && newFrame.groupIds.length > 0
+                ? newFrame.groupIds[0]
+                : null;
+            if (
+              autoGroupId !== null &&
+              newGroupId !== null &&
+              autoGroupId === newGroupId
+            ) {
+              renderFrame(curFrameIndex, autoIndex, timestamp);
+            }
+          }
         }
       };
 
