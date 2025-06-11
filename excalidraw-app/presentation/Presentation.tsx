@@ -6,6 +6,11 @@ import {
 } from "excalidraw-app/presentation/animation";
 import { KEYS, supportsResizeObserver } from "@excalidraw/common";
 import { isInitializedImageElement } from "@excalidraw/element/typeChecks";
+import {
+  isElementInGroup,
+  elementsAreInSameGroup,
+  isInGroup,
+} from "@excalidraw/element";
 
 import type {
   AppState,
@@ -15,6 +20,7 @@ import type {
 import type {
   ExcalidrawElement,
   ExcalidrawFrameElement,
+  ExcalidrawArrowElement,
   FileId,
 } from "@excalidraw/element/types";
 
@@ -77,6 +83,118 @@ const buildElementMap = (
   return map;
 };
 
+const getOrderedFrames = (
+  frames: ExcalidrawFrameElement[],
+  elements: ExcalidrawElement[],
+) => {
+  const result: ExcalidrawFrameElement[] = [];
+  if (frames !== null) {
+    let firstY = 0;
+    let frameIndex = -1;
+    frames.forEach((frame, index) => {
+      if (frame !== null) {
+        const be = frame.boundElements;
+        if (be !== null && be.length > 0) {
+          return;
+        }
+
+        if (frameIndex < 0 || firstY > frame.y) {
+          firstY = frame.y;
+          frameIndex = index;
+        }
+      }
+    });
+
+    if (frameIndex >= 0) {
+      while (true) {
+        const curFrame = frames[frameIndex];
+        if (curFrame === null) {
+          break;
+        }
+
+        result.push(curFrame);
+
+        let nextFrame = null;
+        let continueFlag = false;
+        for (let i = frameIndex, n = frames.length - 1; i < n; i++) {
+          const tempFrame = frames[i + 1];
+          if (tempFrame !== null && result.indexOf(tempFrame) < 0) {
+            if (!isInGroup(curFrame)) {
+              frameIndex = i + 1;
+              continueFlag = true;
+              break;
+            }
+
+            if (elementsAreInSameGroup([curFrame, tempFrame])) {
+              frameIndex = i + 1;
+              continueFlag = true;
+              break;
+            }
+
+            if (nextFrame === null) {
+              nextFrame = tempFrame;
+            }
+          }
+        }
+
+        if (continueFlag) {
+          continue;
+        }
+
+        const curboundArrows =
+          curFrame.boundElements !== null
+            ? curFrame.boundElements.filter((e) => e.type === "arrow")
+            : null;
+        if (curboundArrows !== null && curboundArrows.length > 0) {
+          const arrow = elements.find(
+            (e) => e.id === curboundArrows[0].id,
+          ) as ExcalidrawArrowElement;
+          if (
+            arrow !== null &&
+            arrow.startBinding != null &&
+            arrow.startBinding.elementId === curFrame.id
+          ) {
+            const tempIndex = frames.findIndex(
+              (e) =>
+                arrow.endBinding !== null &&
+                e.id === arrow.endBinding.elementId,
+            );
+            if (tempIndex >= 0) {
+              frameIndex = tempIndex;
+              continue;
+            }
+          }
+        }
+
+        if (nextFrame !== null) {
+          frameIndex = frameIndex + 1;
+          continue;
+        }
+
+        break;
+      }
+    }
+  }
+  return result;
+};
+
+const getElementsSameGroupId = (elements: readonly ExcalidrawElement[]) => {
+  const allGroups = elements.flatMap((element) => element.groupIds);
+  const groupCount = new Map<string, number>();
+  let maxGroup = 0;
+  let maxGroupId = null;
+
+  for (const group of allGroups) {
+    groupCount.set(group, (groupCount.get(group) ?? 0) + 1);
+    if (groupCount.get(group)! > maxGroup) {
+      maxGroup = groupCount.get(group)!;
+      maxGroupId = group;
+    }
+  }
+
+  return maxGroup === elements.length ? maxGroupId : null;
+};
+
 export function PresentationScene(props: {
   elements: ExcalidrawElement[];
   appState: Readonly<AppState>;
@@ -86,6 +204,8 @@ export function PresentationScene(props: {
   const { appState, elements, frames, initialFrameIndex = 0 } = props;
   const [loadedInitialFrame, setLoadedInitialFrame] = useState(false);
   const [frameIndex, setFrameIndex] = useState(initialFrameIndex);
+
+  const orderedFrames = getOrderedFrames(frames, elements);
 
   const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
@@ -100,8 +220,8 @@ export function PresentationScene(props: {
         return;
       }
       const deltaFrame = newFrameIndex - curFrameIndex;
-      const newFrame = frames[newFrameIndex];
-      const currentFrame = frames[curFrameIndex];
+      const newFrame = orderedFrames[newFrameIndex];
+      const currentFrame = orderedFrames[curFrameIndex];
 
       const oldFrameElements = getPositionedElementsForFrame(
         currentFrame,
@@ -118,24 +238,20 @@ export function PresentationScene(props: {
         curFrameIndex = newFrameIndex;
         const autoIndex = newFrameIndex + deltaFrame;
         if (
+          deltaFrame !== 0 &&
           animationStartTime === null &&
-          autoIndex < frames.length &&
+          autoIndex < orderedFrames.length &&
           autoIndex >= 0
         ) {
-          const autoFrame = frames[autoIndex];
+          const autoFrame = orderedFrames[autoIndex];
           if (autoFrame !== null) {
-            const autoGroupId =
-              autoFrame.groupIds !== null && autoFrame.groupIds.length > 0
-                ? autoFrame.groupIds[0]
-                : null;
-            const newGroupId =
-              newFrame.groupIds !== null && newFrame.groupIds.length > 0
-                ? newFrame.groupIds[0]
-                : null;
+            const groupId = getElementsSameGroupId([autoFrame, newFrame]);
             if (
-              autoGroupId !== null &&
-              newGroupId !== null &&
-              autoGroupId === newGroupId
+              groupId != null &&
+              //newFrame !==
+              //  orderedFrames.find((e) => isElementInGroup(e, groupId)) &&
+              newFrame !==
+                orderedFrames.findLast((e) => isElementInGroup(e, groupId))
             ) {
               renderFrame(curFrameIndex, autoIndex, timestamp);
             }
@@ -164,7 +280,7 @@ export function PresentationScene(props: {
         );
       }
     },
-    [elements, excalidrawAPI, frames],
+    [elements, excalidrawAPI, orderedFrames],
   );
 
   // Render initial frame and initial state
@@ -227,8 +343,8 @@ export function PresentationScene(props: {
   const [presentationHeight, setPresentationHeight] = useState(1);
   // We want the height, the width, or both to exactly fit the screen
   const scale = Math.min(
-    presentationWidth / frames[frameIndex].width,
-    presentationHeight / frames[frameIndex].height,
+    presentationWidth / orderedFrames[frameIndex].width,
+    presentationHeight / orderedFrames[frameIndex].height,
   );
 
   useEffect(() => {
@@ -264,10 +380,13 @@ export function PresentationScene(props: {
   }, [excalidrawAPI, scale]);
 
   const nextSlide = useCallback(() => {
-    if (animationStartTime === null && frameIndex !== frames.length - 1) {
+    if (
+      animationStartTime === null &&
+      frameIndex !== orderedFrames.length - 1
+    ) {
       renderFrame(frameIndex, frameIndex + 1);
     }
-  }, [frameIndex, frames.length, renderFrame]);
+  }, [frameIndex, orderedFrames.length, renderFrame]);
 
   const prevSlide = useCallback(() => {
     if (animationStartTime === null && frameIndex !== 0) {
@@ -303,7 +422,7 @@ export function PresentationScene(props: {
       );
       document.removeEventListener("wheel", handlePointerDownOrWheel, true);
     };
-  }, [frameIndex, frames.length, nextSlide, prevSlide, renderFrame]);
+  }, [frameIndex, orderedFrames.length, nextSlide, prevSlide, renderFrame]);
 
   const loadExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
     setExcalidrawAPI(api);
@@ -322,8 +441,8 @@ export function PresentationScene(props: {
       {/* The rest is going to be black through the outer div */}
       <div
         style={{
-          width: `${frames[frameIndex].width * scale}px`,
-          height: `${frames[frameIndex].height * scale}px`,
+          width: `${orderedFrames[frameIndex].width * scale}px`,
+          height: `${orderedFrames[frameIndex].height * scale}px`,
         }}
       >
         <Excalidraw
