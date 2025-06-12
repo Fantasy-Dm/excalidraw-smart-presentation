@@ -72,6 +72,8 @@ const ALLOWED_DOMAINS = new Set([
   "giphy.com",
   "reddit.com",
   "forms.microsoft.com",
+  "localhost",
+  "127.0.0.1",
 ]);
 
 const ALLOW_SAME_ORIGIN = new Set([
@@ -276,6 +278,22 @@ export const getEmbedLink = (
     };
     embeddedLinkCache.set(link, ret);
     return ret;
+  }
+
+  if (link.endsWith(".mp4")) {
+    type = "video";
+    embeddedLinkCache.set(link, {
+      link,
+      intrinsicSize: aspectRatio,
+      type,
+      sandbox: { allowSameOrigin },
+    });
+    return {
+      link,
+      intrinsicSize: aspectRatio,
+      type,
+      sandbox: { allowSameOrigin },
+    };
   }
 
   embeddedLinkCache.set(link, {

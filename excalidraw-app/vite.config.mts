@@ -8,6 +8,20 @@ import checker from "vite-plugin-checker";
 import { createHtmlPlugin } from "vite-plugin-html";
 import Sitemap from "vite-plugin-sitemap";
 import { woff2BrowserPlugin } from "../scripts/woff2/woff2-vite-plugins";
+import { resolve } from "path";
+
+const root = process.cwd();
+
+// 所有页面
+const pages = [
+  { name: "index", htmlName: "index.html", htmlPath: "", path:"" },
+  { name: "video", htmlName: "index.html", htmlPath: "video/", path:"" },
+];
+
+pages.forEach((page) => {
+  page.path = resolve(root, ".", page.htmlPath + page.htmlName);
+});
+
 export default defineConfig(({ mode }) => {
   // To load .env variables
   const envVars = loadEnv(mode, `../`);
@@ -80,6 +94,10 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "build",
       rollupOptions: {
+        input: pages.reduce((res: Record<string, string>, cur) => {
+          res[cur.name] = cur.path;
+          return res;
+        }, {}),
         output: {
           assetFileNames(chunkInfo) {
             if (chunkInfo?.name?.endsWith(".woff2")) {
