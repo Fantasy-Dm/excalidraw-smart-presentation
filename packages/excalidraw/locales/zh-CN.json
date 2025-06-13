@@ -113,6 +113,7 @@
     "unbindText": "取消文本绑定",
     "bindText": "将文本绑定到容器",
     "createContainerFromText": "将文本包围在容器中",
+    "resetPresentCanvas": "重置演示画布",
     "link": {
       "edit": "编辑链接",
       "editEmbed": "编辑链接与嵌入",

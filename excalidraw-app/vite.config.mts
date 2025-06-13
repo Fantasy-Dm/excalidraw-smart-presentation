@@ -16,6 +16,7 @@ const root = process.cwd();
 const pages = [
   { name: "index", htmlName: "index.html", htmlPath: "", path:"" },
   { name: "video", htmlName: "index.html", htmlPath: "video/", path:"" },
+  { name: "gif", htmlName: "index.html", htmlPath: "gif/", path:"" },
 ];
 
 pages.forEach((page) => {

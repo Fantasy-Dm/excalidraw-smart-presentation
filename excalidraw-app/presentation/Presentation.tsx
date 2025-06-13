@@ -411,8 +411,8 @@ export function PresentationScene(props: {
     };
 
     document.addEventListener("keydown", handleKeyDown, true);
-    document.addEventListener("pointerdown", handlePointerDownOrWheel, true);
-    document.addEventListener("wheel", handlePointerDownOrWheel, true);
+    //document.addEventListener("pointerdown", handlePointerDownOrWheel, true);
+    //document.addEventListener("wheel", handlePointerDownOrWheel, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
       document.removeEventListener(
@@ -430,11 +430,11 @@ export function PresentationScene(props: {
 
   // Render
   return (
-    <div className="presentation-presentation" ref={presentationSceneDiv}>
+    <div className="presentation-presentation" ref={presentationSceneDiv} data-initial-scale={scale}>
       {/* Used for navigating slides using the mouse */}
-      <div className="presentation-overlays">
-        <div className="presentation-overlay" onClick={prevSlide}></div>
-        <div className="presentation-overlay" onClick={nextSlide}></div>
+      <div className="presentation-navbar">
+        <div className="presentation-navbar-button" onClick={prevSlide}></div>
+        <div className="presentation-navbar-button" onClick={nextSlide}></div>
       </div>
 
       {/* We want the canvas to be in a div that has the exact same size as the scaled (zoomed in) frame */}

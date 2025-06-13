@@ -359,6 +359,7 @@ import {
   actionToggleObjectsSnapMode,
   actionToggleCropEditor,
   actionDuplicateSelectionIntoNextFrame,
+  actionResetPresentCanvas,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionToggleHandTool, zoomToFit } from "../actions/actionCanvas";
@@ -11127,6 +11128,7 @@ class App extends React.Component<AppProps, AppState> {
           actionToggleZenMode,
           actionToggleViewMode,
           actionToggleStats,
+          actionResetPresentCanvas,
         ];
       }
 

@@ -33,7 +33,7 @@ export {
   actionToggleTheme,
 } from "./actionCanvas";
 
-export { actionPresent } from "./actionPresentation";
+export { actionPresent, actionResetPresentCanvas } from "./actionPresentation";
 
 export { actionSetEmbeddableAsActiveTool } from "./actionEmbeddable";
 

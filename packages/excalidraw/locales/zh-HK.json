@@ -113,6 +113,7 @@
     "unbindText": "",
     "bindText": "",
     "createContainerFromText": "",
+    "resetPresentCanvas": "重置演示畫布",
     "link": {
       "edit": "",
       "editEmbed": "",

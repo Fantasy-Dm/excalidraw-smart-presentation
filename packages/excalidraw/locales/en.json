@@ -88,6 +88,7 @@
     "language": "Language",
     "liveCollaboration": "Live collaboration...",
     "present": "Present",
+    "resetPresentCanvas": "Reset Present Canvas",
     "duplicateSelection": "Duplicate",
     "duplicateSelectionIntoNextFrame": "Duplicate into next frame",
     "untitled": "Untitled",
