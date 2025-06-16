@@ -246,14 +246,16 @@ export function PresentationScene(props: {
           const autoFrame = orderedFrames[autoIndex];
           if (autoFrame !== null) {
             const groupId = getElementsSameGroupId([autoFrame, newFrame]);
-            if (
-              groupId != null &&
-              //newFrame !==
-              //  orderedFrames.find((e) => isElementInGroup(e, groupId)) &&
-              newFrame !==
-                orderedFrames.findLast((e) => isElementInGroup(e, groupId))
-            ) {
-              renderFrame(curFrameIndex, autoIndex, timestamp);
+            if (groupId != null) {
+              for (let i = orderedFrames.length - 1; i >= 0; i--) {
+                if (
+                  isElementInGroup(orderedFrames[i], groupId) &&
+                  newFrameIndex !== i
+                ) {
+                  renderFrame(curFrameIndex, autoIndex, timestamp);
+                  break;
+                }
+              }
             }
           }
         }
@@ -430,7 +432,11 @@ export function PresentationScene(props: {
 
   // Render
   return (
-    <div className="presentation-presentation" ref={presentationSceneDiv} data-initial-scale={scale}>
+    <div
+      className="presentation-presentation"
+      ref={presentationSceneDiv}
+      data-initial-scale={scale}
+    >
       {/* Used for navigating slides using the mouse */}
       <div className="presentation-navbar">
         <div className="presentation-navbar-button" onClick={prevSlide}></div>
