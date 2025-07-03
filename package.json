@@ -84,7 +84,7 @@
     "rm:node_modules": "rimraf --glob node_modules excalidraw-app/node_modules packages/*/node_modules",
     "clean-install": "yarn rm:node_modules && yarn install",
     "copy:headers": "cp -R cloudflare/* excalidraw-app/build/",
-    "deploy:cloudflare": "npm-run-all start:deploy copy:*"
+    "deploy:cloudflare": "yarn start:deploy && npm run copy:headers"
   },
   "resolutions": {
     "strip-ansi": "6.0.1"
