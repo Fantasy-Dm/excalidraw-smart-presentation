@@ -56,6 +56,8 @@ const RE_REDDIT =
 const RE_REDDIT_EMBED =
   /^<blockquote[\s\S]*?\shref=["'](https?:\/\/(?:www\.)?reddit\.com\/[^"']*)/i;
 
+const RE_LAN_IP = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/;
+
 const ALLOWED_DOMAINS = new Set([
   "youtube.com",
   "youtu.be",
@@ -359,6 +361,10 @@ const matchHostname = (
 
     if (allowedHostnames instanceof Set) {
       if (ALLOWED_DOMAINS.has(bareDomain)) {
+        return bareDomain;
+      }
+
+      if (RE_LAN_IP.test(bareDomain)) {
         return bareDomain;
       }
 
