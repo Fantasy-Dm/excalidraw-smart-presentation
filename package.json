@@ -58,6 +58,7 @@
     "build:preview": "yarn --cwd ./excalidraw-app build:preview",
     "start": "yarn --cwd ./excalidraw-app start",
     "start:production": "yarn --cwd ./excalidraw-app start:production",
+    "start:deploy": "yarn --cwd ./excalidraw-app build",
     "start:example": "yarn build:package && yarn --cwd ./examples/with-script-in-browser start",
     "test:all": "yarn test:typecheck && yarn test:code && yarn test:other && yarn test:app --watch=false",
     "test:app": "vitest",
@@ -85,5 +86,9 @@
   },
   "resolutions": {
     "strip-ansi": "6.0.1"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "yarn": "1.22.22"
   }
 }
