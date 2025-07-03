@@ -83,7 +83,7 @@
     "rm:build": "rimraf --glob excalidraw-app/build excalidraw-app/dist excalidraw-app/dev-dist packages/*/dist packages/*/build examples/*/build examples/*/dist",
     "rm:node_modules": "rimraf --glob node_modules excalidraw-app/node_modules packages/*/node_modules",
     "clean-install": "yarn rm:node_modules && yarn install",
-    "copy:headers": "cp -R cloudflare/* dist/",
+    "copy:headers": "cp -R cloudflare/* excalidraw-app/build/",
     "deploy:cloudflare": "npm-run-all start:deploy copy:*"
   },
   "resolutions": {
